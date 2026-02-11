@@ -102,7 +102,9 @@ class InventoryUpdateImporterType extends \RealtimeDespatch\OrderFlow\Model\Serv
             $body = $requestLine->getBody();
             $sku  = (string) $body->sku;
             $unitsReceived = (integer) $body->qty;
-            $source = (string) $body->source;
+            $source = (string) property_exists($body, 'source')
+                ? ($body->source ?? 'default')
+                : 'default';
             $lastOrderExported = isset($body->lastOrderExported) ? new \DateTime($body->lastOrderExported) : new \DateTime;
 
             $reference = implode('_', [$sku, $source]);
