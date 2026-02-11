@@ -2,8 +2,10 @@
 
 namespace RealtimeDespatch\OrderFlow\Model\Service\Import\Type;
 
- use \RealtimeDespatch\OrderFlow\Helper\Stock as StockHelper;
- use \RealtimeDespatch\OrderFlow\Helper\StockHelperFactory;
+ use RealtimeDespatch\OrderFlow\Model\Indexer\ProductReindexer;
+ use RealtimeDespatch\OrderFlow\Api\Data\ImportLineInterface;
+ use RealtimeDespatch\OrderFlow\Helper\Stock as StockHelper;
+ use RealtimeDespatch\OrderFlow\Helper\StockHelperFactory;
 
 class InventoryUpdateImporterType extends \RealtimeDespatch\OrderFlow\Model\Service\Import\Type\ImporterType
 {
@@ -16,19 +18,27 @@ class InventoryUpdateImporterType extends \RealtimeDespatch\OrderFlow\Model\Serv
     protected $_stockHelper;
 
     /**
+     * @var ProductReindexer
+     */
+    protected ProductReindexer $productReindexer;
+
+    /**
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $config
      * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\ObjectManagerInterface $objectManager
+     * @param ProductReindexer $productReindexer
      * @param \RealtimeDespatch\OrderFlow\Helper\StockHelperFactory $stockHelperFactory
      */
     public function __construct(
         \Magento\Framework\App\Config\ScopeConfigInterface $config,
         \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\ObjectManagerInterface $objectManager,
+        ProductReindexer $productReindexer,
         StockHelperFactory $stockHelperFactory
     ) {
         parent::__construct($config, $logger, $objectManager);
         $this->_stockHelper = $stockHelperFactory->create();
+        $this->productReindexer = $productReindexer;
     }
 
     /**
@@ -69,12 +79,18 @@ class InventoryUpdateImporterType extends \RealtimeDespatch\OrderFlow\Model\Serv
         $tx          = $this->_objectManager->create('Magento\Framework\DB\Transaction');
         $import      = $this->_createImport($request);
         $importLines = array();
+        $successSkus = [];
 
         $tx->addObject($import);
         $tx->addObject($request);
 
         foreach ($request->getLines() as $requestLine) {
+            $body = $requestLine->getBody();
+            $sku = (string) $body->sku;
             $importLine = $this->_importLine($import, $request, $requestLine);
+            if ($importLine->getResult() === ImportLineInterface::RESULT_SUCCESS) {
+                $successSkus[] = $sku;
+            }
             $importLine->setImport($import);
             $tx->addObject($importLine);
             $tx->addObject($requestLine);
@@ -83,6 +99,8 @@ class InventoryUpdateImporterType extends \RealtimeDespatch\OrderFlow\Model\Serv
         $request->setProcessedAt(date('Y-m-d H:i:s'));
 
         $tx->save();
+
+        $this->productReindexer->reindexSkus($successSkus);
     }
 
     /**
