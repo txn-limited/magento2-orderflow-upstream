@@ -23,6 +23,11 @@ class ProductExportExporterType extends \RealtimeDespatch\OrderFlow\Model\Servic
     protected $_helper;
 
     /**
+     * @var \Magento\Framework\Stdlib\DateTime\DateTime
+     */
+    protected $_date;
+
+    /**
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $config
      * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\ObjectManagerInterface $objectManager
@@ -34,12 +39,14 @@ class ProductExportExporterType extends \RealtimeDespatch\OrderFlow\Model\Servic
         \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\ObjectManagerInterface $objectManager,
         \Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
-        \RealtimeDespatch\OrderFlow\Helper\Export\Product $helper
+        \RealtimeDespatch\OrderFlow\Helper\Export\Product $helper,
+        \Magento\Framework\Stdlib\DateTime\DateTime $date
     ) {
         parent::__construct($config, $logger, $objectManager);
         $this->_productRepository = $productRepository;
         $this->_helper = $helper;
         $this->_tx = $this->_objectManager->create('Magento\Framework\DB\Transaction');
+        $this->_date = $date;
     }
 
     /**
@@ -117,7 +124,7 @@ class ProductExportExporterType extends \RealtimeDespatch\OrderFlow\Model\Servic
                 throw new \Exception("Product '{$sku}' is not in any product export enabled websites");
             }
             $product->setOrderflowExportStatus(__('Exported'));
-            $product->setOrderflowExportDate($request->getCreationTime());
+            $product->setOrderflowExportDate($this->_date->gmtDate());
             $this->_tx->addObject($product);
 
             $requestLine->setResponse(__('Product successfully exported.'));
