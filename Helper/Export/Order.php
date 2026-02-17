@@ -132,7 +132,7 @@ class Order extends \Magento\Framework\App\Helper\AbstractHelper
             ->addFieldToFilter('is_virtual', ['eq' => 0])
             ->addFieldToFilter('orderflow_export_date', ['null' => true])
             ->addFieldToFilter('orderflow_export_status', [
-                ['neq' => self::STATUS_QUEUED],
+                ['nin' => [self::STATUS_QUEUED, 'Exported']],
                 ['null' => true],
             ])
             ->setPage(1, $this->getBatchSize($website->getId()));

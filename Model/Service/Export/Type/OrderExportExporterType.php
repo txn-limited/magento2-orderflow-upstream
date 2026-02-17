@@ -18,6 +18,11 @@ class OrderExportExporterType extends \RealtimeDespatch\OrderFlow\Model\Service\
     protected $_orderRepository;
 
     /**
+     * @var \Magento\Framework\Stdlib\DateTime\DateTime
+     */
+    protected $_date;
+
+    /**
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $config
      * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\ObjectManagerInterface $objectManager
@@ -27,11 +32,13 @@ class OrderExportExporterType extends \RealtimeDespatch\OrderFlow\Model\Service\
         \Magento\Framework\App\Config\ScopeConfigInterface $config,
         \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\ObjectManagerInterface $objectManager,
-        \Magento\Sales\Api\Data\OrderInterface $orderRepository
+        \Magento\Sales\Api\Data\OrderInterface $orderRepository,
+        \Magento\Framework\Stdlib\DateTime\DateTime $date
     ) {
         parent::__construct($config, $logger, $objectManager);
         $this->_orderRepository = $orderRepository;
         $this->_tx = $this->_objectManager->create('Magento\Framework\DB\Transaction');
+        $this->_date = $date;
     }
 
     /**
@@ -110,7 +117,7 @@ class OrderExportExporterType extends \RealtimeDespatch\OrderFlow\Model\Service\
             }
 
             $order->setOrderflowExportStatus(__('Exported'));
-            $order->setOrderflowExportDate($request->getCreationTime());
+            $order->setOrderflowExportDate($this->_date->gmtDate());
             $this->_tx->addObject($order);
 
             $requestLine->setResponse(__('Order successfully exported.'));
